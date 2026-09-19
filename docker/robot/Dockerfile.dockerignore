@@ -4,4 +4,6 @@
 !andino_control
 !andino_bringup
 !docker/robot/entrypoint.sh
+!docker/robot/topic_alive.py
+!docker/robot/rplidar_stop.py
 **/.git

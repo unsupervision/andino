@@ -52,6 +52,10 @@ FROM deps AS runtime
 ARG ROS_DISTRO
 COPY --from=build /opt/andino /opt/andino
 COPY docker/robot/entrypoint.sh /entrypoint.sh
+# For liveness probes: a node that is running is not necessarily a node that is publishing.
+COPY docker/robot/topic_alive.py /usr/local/bin/topic-alive
+# For the lidar container: an A1 left streaming by a killed driver hangs the next one's handshake.
+COPY docker/robot/rplidar_stop.py /usr/local/bin/rplidar-stop
 
 # rmw_zenoh rather than the default DDS, because this robot's ROS graph is meant to extend onto
 # other machines (GPU perception, SLAM) across a routed network. DDS discovery is multicast, which
@@ -62,6 +66,8 @@ ENV ROS_DISTRO=${ROS_DISTRO} \
     RMW_IMPLEMENTATION=rmw_zenoh_cpp
 
 ENTRYPOINT ["/entrypoint.sh"]
+# Default: upstream's single-process bringup, un-namespaced. A fleet deployment runs
+# robot_base.launch.py and robot_lidar.launch.py instead, in separate containers, with a namespace.
 # The camera is off by default: on a libcamera-era Raspberry Pi OS the sensor is not a plain V4L2
 # capture device, so upstream's v4l2_camera launch does not apply. Enable it per deployment.
 CMD ["ros2", "launch", "andino_bringup", "andino_robot.launch.py", "include_camera:=false"]

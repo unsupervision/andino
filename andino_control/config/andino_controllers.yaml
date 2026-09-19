@@ -1,4 +1,8 @@
-controller_manager:
+# The node keys are WILDCARDS so that this file configures the controllers in any namespace
+# (robot_base.launch.py runs them under /<robot>) as well as in none. A plain `controller_manager:`
+# key matches only /controller_manager, and a namespaced manager then starts with no controller
+# types defined.
+/**/controller_manager:
   ros__parameters:
     update_rate: 50  # Hz
 
@@ -8,7 +12,7 @@ controller_manager:
     joint_state_broadcaster:
       type: joint_state_broadcaster/JointStateBroadcaster
 
-diff_controller:
+/**/diff_controller:
   ros__parameters:
     # See https://github.com/ros-controls/ros2_controllers/blob/humble/diff_drive_controller/src/diff_drive_controller_parameter.yaml
     publish_rate: 50.0
