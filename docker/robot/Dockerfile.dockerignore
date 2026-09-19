@@ -1,0 +1,7 @@
+*
+!andino_description
+!andino_base
+!andino_control
+!andino_bringup
+!docker/robot/entrypoint.sh
+**/.git
