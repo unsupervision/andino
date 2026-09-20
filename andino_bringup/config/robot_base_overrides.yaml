@@ -7,3 +7,9 @@
 /**/diff_controller:
   ros__parameters:
     enable_odom_tf: false
+    # In a namespace, Jazzy's diff_drive_controller prefixes its frame ids with it: the odometry
+    # message said `mouse/odom` -> `mouse/base_link`. This fleet's convention is per-robot TF
+    # TOPICS and UNPREFIXED frames (what robot_state_publisher and the EKF use), and a filter
+    # that cannot relate `mouse/base_link` to `base_link` drops the wheel odometry WITHOUT A WORD:
+    # seen on hardware — fused yaw fine, fused position frozen at zero while the wheels turned.
+    tf_frame_prefix_enable: false
