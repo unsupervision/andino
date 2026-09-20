@@ -4,7 +4,11 @@
 # types defined.
 /**/controller_manager:
   ros__parameters:
-    update_rate: 50  # Hz
+    # [Hz] 30, not 50: one cycle is two serial exchanges — encoders+IMU in (measured 13-14 ms at
+    # 115200 baud) and the speed command out (3-6 ms) — so 50 Hz left no margin and overran a few
+    # times a minute. 30 Hz is also the rate of the firmware's own PID (Constants::kPidRate):
+    # commanding it faster than it closes its loop buys nothing.
+    update_rate: 30
 
     diff_controller:
       type: diff_drive_controller/DiffDriveController
@@ -30,7 +34,7 @@
 /**/diff_controller:
   ros__parameters:
     # See https://github.com/ros-controls/ros2_controllers/blob/humble/diff_drive_controller/src/diff_drive_controller_parameter.yaml
-    publish_rate: 50.0
+    publish_rate: 30.0  # no faster than update_rate
     left_wheel_names: ['left_wheel_joint']
     right_wheel_names: ['right_wheel_joint']
     wheels_per_side: 1

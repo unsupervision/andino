@@ -4,7 +4,7 @@
 # Each *_config row is   x  y  z | roll pitch yaw | vx vy vz | vroll vpitch vyaw | ax ay az
 /**/ekf_filter_node:
   ros__parameters:
-    frequency: 50.0
+    frequency: 30.0  # the rate of both inputs (the controller manager's update_rate)
     sensor_timeout: 0.2
     two_d_mode: true
     publish_tf: true
