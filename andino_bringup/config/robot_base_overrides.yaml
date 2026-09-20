@@ -13,3 +13,32 @@
     # that cannot relate `mouse/base_link` to `base_link` drops the wheel odometry WITHOUT A WORD:
     # seen on hardware — fused yaw fine, fused position frozen at zero while the wheels turned.
     tf_frame_prefix_enable: false
+
+    # LIMITS. Upstream ships none (has_*_limits: false), which is tolerable on a desk with a
+    # joystick and not for a robot commanded over a network by software. Whatever arrives on
+    # cmd_vel — a bug, a stale publisher, a planner's bad day — this is the most the base will do.
+    # Sized for an apartment, not for the motors: flat out they manage ~0.45 m/s (12.9 rad/s at
+    # the wheel, measured at full PWM); the worst case below asks the wheels for 8 rad/s.
+    # Braking is allowed to be twice as hard as accelerating: stopping is the safe direction.
+    linear.x.has_velocity_limits: true
+    linear.x.max_velocity: 0.20          # [m/s]
+    linear.x.min_velocity: -0.20
+    linear.x.has_acceleration_limits: true
+    linear.x.max_acceleration: 0.4       # [m/s^2]
+    linear.x.max_deceleration: -0.8
+    linear.x.max_acceleration_reverse: -0.4
+    linear.x.max_deceleration_reverse: 0.8
+    angular.z.has_velocity_limits: true
+    angular.z.max_velocity: 1.2          # [rad/s]
+    angular.z.min_velocity: -1.2
+    angular.z.has_acceleration_limits: true
+    angular.z.max_acceleration: 2.5      # [rad/s^2]
+    angular.z.max_deceleration: -5.0
+    angular.z.max_acceleration_reverse: -2.5
+    angular.z.max_deceleration_reverse: 5.0
+    # Explicit, not inherited: with no fresh command for this long the base stops by itself. The
+    # firmware has its own 3 s auto-stop behind it (Constants::kAutoStopWindow).
+    cmd_vel_timeout: 0.5                 # [s]
+    # cmd_vel_out then shows what the limiter actually let through — the first place to look when
+    # the robot does less than it was told.
+    publish_limited_velocity: true
