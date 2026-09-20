@@ -14,6 +14,16 @@
     # seen on hardware — fused yaw fine, fused position frozen at zero while the wheels turned.
     tf_frame_prefix_enable: false
 
+    # CALIBRATION: the track width that relates wheel speeds to turn rate is wider than the
+    # 0.137 m between the wheels, because tyres scrub when a differential drive pivots. Measured on
+    # the robot `mouse`, hard floor, against its IMU (docs: hosts/mouse/tools/wheel_sep_calibration.py
+    # in the homelab repo): over two full turns each way the wheels over-reported rotation by
+    # 6.0% (CCW) and 7.5% (CW). Uncalibrated, wheel odometry over-reads every turn and a commanded
+    # turn rate under-delivers by the same amount. Effective separation: 0.137 * 1.068 = 0.146 m.
+    # It belongs to a robot's tyres and a kind of floor: when a second robot runs this launch file,
+    # move it to a per-robot file.
+    wheel_separation_multiplier: 1.068
+
     # LIMITS. Upstream ships none (has_*_limits: false), which is tolerable on a desk with a
     # joystick and not for a robot commanded over a network by software. Whatever arrives on
     # cmd_vel — a bug, a stale publisher, a planner's bad day — this is the most the base will do.
