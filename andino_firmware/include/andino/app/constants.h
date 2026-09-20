@@ -29,12 +29,20 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #pragma once
 
+// Set at build time (-D ANDINO_FW_VERSION=\"<git describe>\") so a board can say what it is running.
+#ifndef ANDINO_FW_VERSION
+#define ANDINO_FW_VERSION "unversioned"
+#endif
+
 namespace andino {
 
 /// @brief Common constants.
 struct Constants {
   /// @brief Serial port baud rate.
-  static constexpr long kBaudrate{57600};
+  static constexpr long kBaudrate{115200};
+
+  /// @brief Firmware version, answered by the `v` command.
+  static constexpr const char* kFirmwareVersion{ANDINO_FW_VERSION};
 
   /// @brief Time window to automatically stop the robot if no command has been received [ms].
   static constexpr long kAutoStopWindow{3000};

@@ -96,6 +96,7 @@ void App::setup() {
   shell_.register_command(Commands::kSetPidsTuningGains, cmd_set_pid_tuning_gains_cb, this);
   shell_.register_command(Commands::kGetIsImuConnected, cmd_get_is_imu_connected_cb, this);
   shell_.register_command(Commands::kReadEncodersAndImu, cmd_read_encoders_and_imu_cb, this);
+  shell_.register_command(Commands::kGetVersion, cmd_get_version_cb, this);
 
   // Initialize IMU sensor.
   is_imu_connected = imu_.begin();
@@ -236,6 +237,11 @@ void App::cmd_get_is_imu_connected_cb(void* context, int, char**) {
   app->serial_stream_.println(app->is_imu_connected);
 }
 
+void App::cmd_get_version_cb(void* context, int, char**) {
+  App* app = static_cast<App*>(context);
+  app->serial_stream_.println(Constants::kFirmwareVersion);
+}
+
 void App::cmd_read_encoders_and_imu_cb(void* context, int, char**) {
   App* app = static_cast<App*>(context);
   app->serial_stream_.print(app->left_encoder_.read());
@@ -256,11 +262,12 @@ void App::cmd_read_encoders_and_imu_cb(void* context, int, char**) {
 
   // Retrieve angular velocity (rad/s).
   Imu::Vector3 angular_velocity = app->imu_.get_angular_velocity();
-  app->serial_stream_.print(angular_velocity.x);
+  // Four decimals: the sensor resolves 1/16 deg/s (~0.0011 rad/s), which two decimals would erase.
+  app->serial_stream_.print(angular_velocity.x, 4);
   app->serial_stream_.print(" ");
-  app->serial_stream_.print(angular_velocity.y);
+  app->serial_stream_.print(angular_velocity.y, 4);
   app->serial_stream_.print(" ");
-  app->serial_stream_.print(angular_velocity.z);
+  app->serial_stream_.print(angular_velocity.z, 4);
   app->serial_stream_.print(" ");
 
   // Retrieve linear acceleration (m/s^2).
@@ -269,7 +276,9 @@ void App::cmd_read_encoders_and_imu_cb(void* context, int, char**) {
   app->serial_stream_.print(" ");
   app->serial_stream_.print(linear_acceleration.y);
   app->serial_stream_.print(" ");
-  app->serial_stream_.print(linear_acceleration.z);
+  // Terminate the line like every other reply: the host reads up to '\n' and otherwise waits out
+  // its whole timeout on every cycle.
+  app->serial_stream_.println(linear_acceleration.z);
 }
 
 void App::adjust_motors_speed() {

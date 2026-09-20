@@ -345,6 +345,12 @@ TEST_F(AppTest, GetIsImuConnectedCommandWhenNotConnected) {
   EXPECT_EQ(run_command("h"), "0\n");
 }
 
+TEST_F(AppTest, GetVersionCommand) {
+  app_.setup();
+
+  EXPECT_EQ(run_command("v"), std::string(andino::Constants::kFirmwareVersion) + "\n");
+}
+
 TEST_F(AppTest, SetMotorsPwmCommand) {
   app_.setup();
 
@@ -384,7 +390,7 @@ TEST_F(AppTest, ReadEncodersAndImuCommand) {
       .WillByDefault(Return(andino::Imu::Vector3{4.5, 5.5, 6.5}));
 
   // Ticks count, orientation quaternion, angular velocity and linear acceleration.
-  EXPECT_EQ(run_command("i"), "0 0 0.1000 0.2000 0.3000 0.4000 1.50 2.50 3.50 4.50 5.50 6.50");
+  EXPECT_EQ(run_command("i"), "0 0 0.1000 0.2000 0.3000 0.4000 1.5000 2.5000 3.5000 4.50 5.50 6.50\n");
 }
 
 TEST_F(AppTest, LoopStopsMotorsOnceAutoStopWindowElapses) {

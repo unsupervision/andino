@@ -63,8 +63,12 @@ Imu::Orientation ImuArduino::get_orientation() const {
 Imu::Vector3 ImuArduino::get_angular_velocity() const {
   // See https://learn.adafruit.com/adafruit-bno055-absolute-orientation-sensor/overview for
   // further information.
+  // Adafruit_BNO055 leaves the sensor in its default unit selection and scales the gyroscope to
+  // degrees per second; the HAL contract is rad/s.
+  static constexpr double kDegToRad{0.017453292519943295};
   imu::Vector<3> angular_velocity = g_bno055_imu.getVector(Adafruit_BNO055::VECTOR_GYROSCOPE);
-  return Vector3{angular_velocity.x(), angular_velocity.y(), angular_velocity.z()};
+  return Vector3{angular_velocity.x() * kDegToRad, angular_velocity.y() * kDegToRad,
+                 angular_velocity.z() * kDegToRad};
 }
 
 Imu::Vector3 ImuArduino::get_linear_acceleration() const {

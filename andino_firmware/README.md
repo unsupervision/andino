@@ -32,7 +32,7 @@ source $HOME/.bashrc
 
 ## Description
 
-Via `serial` connection (57600 baud) it is possible to interact with the microcontroller. The interface is described in the [commands.h](src/commands.h) file. Here are the most used commands:
+Via `serial` connection (115200 baud) it is possible to interact with the microcontroller. The interface is described in the [commands.h](src/commands.h) file. Here are the most used commands:
 
 
  - Get encoder values: `'e'`
@@ -48,7 +48,7 @@ Note: Remember the carriage return character at the end of the message.
 
 ## Test it!
 
-A serial port connection must be created at 57600 bauds. You can use the serial monitor from Arduino IDE for example.
+A serial port connection must be created at 115200 bauds. You can use the serial monitor from Arduino IDE for example.
 
 * Open loop verification:
   - Send `o 255 255` to go full speed
@@ -76,4 +76,5 @@ A serial port connection must be created at 57600 bauds. You can use the serial 
 | `o` | Set open-loop speed for the motors[pwm] | left_pwm right_pwm | `o 255 255` |  |
 | `u` | Set PID values | kp kd ki offset | `u 1.0 0.1 0.01 0` |  |
 | `h` | Get if IMU is connected |  | `h` | `0` if not connected, `1` if connected |
+| `v` | Get the firmware version (set at build time with `-D ANDINO_FW_VERSION`) |  | `v` | `<version>` |
 | `i` | Get IMU data and encoder tick values |  | `i` | `<left> <right>  <orientation_X> <orientation_Y> <orientation_Z> <orientation_W> <angular_velocity_X> <angular_velocity_Y> <angular_velocity_Z> <linear_acceleration_X> <linear_acceleration_Y> <linear_acceleration_Z>` |
