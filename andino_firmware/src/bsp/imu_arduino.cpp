@@ -46,7 +46,13 @@ static Adafruit_BNO055 g_bno055_imu(55, BNO055_ADDRESS_A, &Wire);
 namespace andino {
 
 bool ImuArduino::begin() const {
-  if (!g_bno055_imu.begin()) {
+  // IMUPLUS: the sensor fuses its gyroscope and accelerometer only. The library's default, NDOF,
+  // also steers heading by the magnetometer — on an indoor robot that means a heading referenced
+  // to whatever steel and motors are nearby, and one that is not trustworthy until the sensor has
+  // been calibrated by waving it in a figure of eight, which a floor robot never does (and the
+  // BNO055 forgets at every power-off). Here heading is RELATIVE to power-on and smooth; an
+  // absolute reference, where one is wanted, belongs to the localisation layer.
+  if (!g_bno055_imu.begin(OPERATION_MODE_IMUPLUS)) {
     return false;
   }
   g_bno055_imu.setExtCrystalUse(true);
