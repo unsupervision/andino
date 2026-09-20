@@ -79,6 +79,7 @@ void Pid::reset(long encoder_count) {
   last_encoder_count_ = encoder_count;
   last_input_ = 0;
   last_output_ = 0;
+  setpoint_remainder_ = 0;
 }
 
 /// @brief Enable PID
@@ -134,8 +135,27 @@ void Pid::compute(long encoder_count, int& computed_output) {
   last_output_ = output;
 }
 
+void Pid::compute(long encoder_count, unsigned long elapsed_ms, int& computed_output) {
+  if (enabled_) {
+    // ticks = rate [ticks/s] * elapsed [ms] / 1000, keeping what is left over for the next period.
+    // Both operands truncate toward zero, so the carry works the same in reverse.
+    setpoint_remainder_ += static_cast<long>(setpoint_rate_) * static_cast<long>(elapsed_ms);
+    setpoint_ = static_cast<int>(setpoint_remainder_ / 1000);
+    setpoint_remainder_ -= static_cast<long>(setpoint_) * 1000;
+  }
+  compute(encoder_count, computed_output);
+}
+
 void Pid::set_setpoint(int setpoint) {
   setpoint_ = setpoint;
+}
+
+void Pid::set_setpoint_rate(int setpoint_rate) {
+  setpoint_rate_ = setpoint_rate;
+}
+
+int Pid::setpoint() const {
+  return setpoint_;
 }
 
 void Pid::set_tunings(int kp, int kd, int ki, int ko) {

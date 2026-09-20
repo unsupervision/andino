@@ -126,7 +126,8 @@ class App {
   static void cmd_get_version_cb(void* context, int argc, char** argv);
 
   /// Computes the PID output and updates the motors speed accordingly.
-  void adjust_motors_speed();
+  /// @param elapsed_ms Time since the previous computation [ms].
+  void adjust_motors_speed(unsigned long elapsed_ms);
 
   /// Stops the motors and disables the PID.
   void stop_motors();

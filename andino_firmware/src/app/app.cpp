@@ -107,9 +107,11 @@ void App::loop() {
   shell_.process_input();
 
   // Compute PID output at the configured rate.
-  if ((clock_.millis() - last_pid_computation_) > Constants::kPidPeriod) {
-    last_pid_computation_ = clock_.millis();
-    adjust_motors_speed();
+  const unsigned long now = clock_.millis();
+  const unsigned long elapsed = now - last_pid_computation_;
+  if (elapsed > static_cast<unsigned long>(Constants::kPidPeriod)) {
+    last_pid_computation_ = now;
+    adjust_motors_speed(elapsed);
   }
 
   // Stop the motors if auto-stop interval has been reached.
@@ -177,10 +179,11 @@ void App::cmd_set_motors_speed_cb(void* context, int argc, char** argv) {
     app->right_pid_controller_.enable();
   }
 
-  // The target speeds are in ticks per second, so we need to convert them to ticks per
-  // Constants::kPidRate.
-  app->left_pid_controller_.set_setpoint(left_motor_speed / Constants::kPidRate);
-  app->right_pid_controller_.set_setpoint(right_motor_speed / Constants::kPidRate);
+  // The target speeds are in ticks per second. They are handed over as such: converting them to
+  // whole ticks per PID period here (speed / Constants::kPidRate) truncated away up to a tick per
+  // period — 10-20% of a slow command. See Pid::set_setpoint_rate().
+  app->left_pid_controller_.set_setpoint_rate(left_motor_speed);
+  app->right_pid_controller_.set_setpoint_rate(right_motor_speed);
   app->serial_stream_.println("OK");
 }
 
@@ -281,11 +284,11 @@ void App::cmd_read_encoders_and_imu_cb(void* context, int, char**) {
   app->serial_stream_.println(linear_acceleration.z);
 }
 
-void App::adjust_motors_speed() {
+void App::adjust_motors_speed(unsigned long elapsed_ms) {
   int left_motor_speed = 0;
   int right_motor_speed = 0;
-  left_pid_controller_.compute(left_encoder_.read(), left_motor_speed);
-  right_pid_controller_.compute(right_encoder_.read(), right_motor_speed);
+  left_pid_controller_.compute(left_encoder_.read(), elapsed_ms, left_motor_speed);
+  right_pid_controller_.compute(right_encoder_.read(), elapsed_ms, right_motor_speed);
   if (left_pid_controller_.enabled()) {
     left_motor_.set_speed(left_motor_speed);
   }

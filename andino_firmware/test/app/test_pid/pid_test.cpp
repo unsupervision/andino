@@ -129,6 +129,79 @@ TEST(PidTest, SetTunings) {
   EXPECT_EQ(output, 60);
 }
 
+TEST(PidTest, SetpointRateIsExactOnAverage) {
+  // 266 ticks/s at a nominal 30 Hz is 8.87 ticks per period. A whole-tick setpoint could only say 8.
+  andino::Pid pid_controller(1, 0, 0, 1, -100, 100);
+  int output = 0;
+  pid_controller.set_setpoint_rate(266);
+  pid_controller.enable();
+
+  long total = 0;
+  for (int period = 0; period < 300; ++period) {
+    pid_controller.compute(0, 33UL, output);
+    EXPECT_GE(pid_controller.setpoint(), 8);
+    EXPECT_LE(pid_controller.setpoint(), 9);
+    total += pid_controller.setpoint();
+  }
+  // 300 periods of 33 ms are 9.9 s: 266 * 9.9 = 2633.4 ticks.
+  EXPECT_EQ(total, 2633);
+}
+
+TEST(PidTest, SetpointRateIsSymmetricInReverse) {
+  andino::Pid pid_controller(1, 0, 0, 1, -100, 100);
+  int output = 0;
+  pid_controller.set_setpoint_rate(-146);
+  pid_controller.enable();
+
+  long total = 0;
+  for (int period = 0; period < 300; ++period) {
+    pid_controller.compute(0, 33UL, output);
+    EXPECT_LE(pid_controller.setpoint(), -4);
+    EXPECT_GE(pid_controller.setpoint(), -5);
+    total += pid_controller.setpoint();
+  }
+  // -146 * 9.9 = -1445.4 ticks.
+  EXPECT_EQ(total, -1445);
+}
+
+TEST(PidTest, SetpointRateFollowsTheTimeThatElapsed) {
+  // A period that ran long is asked for proportionally more ticks, not for a nominal period's worth.
+  andino::Pid pid_controller(1, 0, 0, 1, -100, 100);
+  int output = 0;
+  pid_controller.set_setpoint_rate(300);
+  pid_controller.enable();
+
+  pid_controller.compute(0, 30UL, output);
+  EXPECT_EQ(pid_controller.setpoint(), 9);
+  pid_controller.compute(0, 60UL, output);
+  EXPECT_EQ(pid_controller.setpoint(), 18);
+}
+
+TEST(PidTest, ResetDropsTheCarriedRemainder) {
+  andino::Pid pid_controller(1, 0, 0, 1, -100, 100);
+  int output = 0;
+  pid_controller.set_setpoint_rate(29);
+  pid_controller.enable();
+
+  // 29 ticks/s * 33 ms = 0.957 ticks: nothing yet, all of it carried.
+  pid_controller.compute(0, 33UL, output);
+  EXPECT_EQ(pid_controller.setpoint(), 0);
+  pid_controller.reset(0);
+  // Without the reset the carry would make this period's setpoint 1.
+  pid_controller.compute(0, 33UL, output);
+  EXPECT_EQ(pid_controller.setpoint(), 0);
+}
+
+TEST(PidTest, DisabledControllerAccruesNothing) {
+  andino::Pid pid_controller(1, 0, 0, 1, -100, 100);
+  int output = 0;
+  pid_controller.set_setpoint_rate(3000);
+
+  pid_controller.compute(0, 1000UL, output);
+  EXPECT_EQ(pid_controller.setpoint(), 0);
+  EXPECT_EQ(output, 0);
+}
+
 }  // namespace
 }  // namespace test
 }  // namespace andino

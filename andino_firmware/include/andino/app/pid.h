@@ -66,10 +66,34 @@ class Pid {
   /// @param computed_output Computed output value.
   void compute(long encoder_count, int& computed_output);
 
-  /// @brief Sets the setpoint.
+  /// @brief Computes a new output, deriving this period's setpoint from the target RATE set with
+  /// set_setpoint_rate() and the time that actually elapsed since the previous computation.
+  ///
+  /// @param encoder_count Current encoder value.
+  /// @param elapsed_ms Time since the previous computation [ms].
+  /// @param computed_output Computed output value.
+  void compute(long encoder_count, unsigned long elapsed_ms, int& computed_output);
+
+  /// @brief Sets the setpoint, in encoder ticks per computation period.
   ///
   /// @param setpoint Desired setpoint value.
   void set_setpoint(int setpoint);
+
+  /// @brief Sets the target as a RATE [ticks/s], for compute(encoder_count, elapsed_ms, output).
+  ///
+  /// A setpoint in whole ticks per period cannot express most speeds: at 30 Hz one tick per period
+  /// is 30 ticks/s, so a target of 266 ticks/s used to be truncated to 8 per period — 240 ticks/s,
+  /// 90% of what was asked — and 146 ticks/s to 4 per period, 82%. With a rate, each period's
+  /// setpoint is what the target amounts to over the time that really elapsed, and the fraction
+  /// that does not fit in a whole tick is carried into the next period: the periods alternate
+  /// between 8 and 9, and the AVERAGE is exact. It also stops a late period (the loop is busy
+  /// printing a reply) from being asked for a nominal period's worth of ticks.
+  ///
+  /// @param setpoint_rate Desired rate [ticks/s].
+  void set_setpoint_rate(int setpoint_rate);
+
+  /// @brief Returns the setpoint of the current period [ticks per period].
+  int setpoint() const;
 
   /// @brief Sets the tuning gains.
   ///
@@ -97,8 +121,12 @@ class Pid {
   /// True if the PID is enabled, false otherwise.
   bool enabled_{false};
 
-  /// Setpoint value.
+  /// Setpoint value [ticks per period].
   int setpoint_{0};
+  /// Target rate [ticks/s], used by the elapsed-time overload of compute().
+  int setpoint_rate_{0};
+  /// What the target rate has accrued that did not yet amount to a whole tick [ticks * ms].
+  long setpoint_remainder_{0};
   /// Accumulated integral term.
   int integral_term_{0};
   /// Last received encoder value.
