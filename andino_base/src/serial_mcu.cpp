@@ -29,6 +29,8 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "andino_base/serial_mcu.h"
 
+#include <algorithm>
+#include <cctype>
 #include <chrono>
 #include <cstdlib>
 #include <iostream>
@@ -100,6 +102,12 @@ bool SerialMcu::wait_until_ready(std::chrono::milliseconds deadline) {
   const auto end = std::chrono::steady_clock::now() + deadline;
   while (std::chrono::steady_clock::now() < end) {
     if (!send_message("e", /* log_timeout */ false).empty()) {
+      // The UART is up before the firmware's shell is: the polls sent during those last few
+      // hundred milliseconds were queued on the board, and are now all answered at once. Let that
+      // burst land and drop it, or the NEXT command reads one of those stale replies as its own
+      // (seen on hardware: `h` -> "0 0", parsed as "no IMU").
+      std::this_thread::sleep_for(std::chrono::milliseconds(250));
+      serial_port_.FlushIOBuffers();
       return true;
     }
   }
@@ -122,13 +130,20 @@ SerialMcu::EncodersData SerialMcu::read_encoders() {
 
 bool SerialMcu::is_imu_available() {
   // Decided once and lived with for the whole session, so one lost exchange must not decide it.
-  for (int attempt = 0; attempt < 3; ++attempt) {
-    const std::string response = send_message("h", /* log_timeout */ false);
-    if (!response.empty()) {
-      return std::atoi(response.c_str()) != 0;
+  // And strictly: the only valid answers are "0" and "1", so anything else is a reply to some
+  // other command that was still in flight — try again rather than parse it.
+  for (int attempt = 0; attempt < 5; ++attempt) {
+    std::string response = send_message("h", /* log_timeout */ false);
+    response.erase(std::remove_if(response.begin(), response.end(), [](unsigned char c) { return std::isspace(c); }),
+                   response.end());
+    if (response == "1") {
+      return true;
+    }
+    if (response == "0") {
+      return false;
     }
   }
-  std::cerr << "No response to h after 3 attempts." << std::endl;
+  std::cerr << "No valid response to h after 5 attempts." << std::endl;
   return false;
 }
 
