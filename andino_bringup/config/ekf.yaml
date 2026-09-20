@@ -1,4 +1,4 @@
-# robot_localization EKF for one Andino: wheel odometry + the BNO055's gyro -> odom -> base_link.
+# robot_localization EKF for one Andino: wheel odometry + the BNO055's heading -> odom -> base_link.
 # Wildcard node key so that it configures the filter in any namespace (/<robot>/ekf_filter_node).
 #
 # Each *_config row is   x  y  z | roll pitch yaw | vx vy vz | vroll vpitch vyaw | ax ay az
@@ -29,17 +29,21 @@
     odom0_differential: false
     odom0_relative: false
 
-    # IMU: the gyro's yaw RATE only, for now. The fused orientation is deliberately left out: the
-    # firmware runs the BNO055 in its default NDOF mode, which steers heading by the magnetometer,
-    # and this one sits a few centimetres from two DC motors. Until that heading has been watched
-    # with the motors running (or the sensor moved to IMUPLUS, which ignores the magnetometer),
-    # integrating the gyro is the trustworthy part. To add it: set the 6th entry (yaw) true and
-    # imu0_relative: true.
+    # IMU: the sensor's own fused HEADING, not the gyro rate — one or the other, never both: they
+    # are the same gyroscope, and a filter told they are independent becomes overconfident.
+    # Why the heading: the firmware runs the BNO055 in IMUPLUS (no magnetometer, so nothing indoors
+    # can drag it), and measured on the robot against a full 360 degree turn back onto a tape line,
+    # the chip's heading read 357.0 while the rate we sample at 30 Hz integrated to 366.4 — the
+    # same ~3% gap showed in two quarter turns. At rest, lidar spinning, the chip holds +/-0.1
+    # degrees where the integrated rate creeps; and a dropped serial sample costs the heading
+    # nothing, where it costs the rate whatever the robot turned in that interval.
+    # `relative`: the first reading becomes zero, so the robot's heading at start-up defines the
+    # odom frame (IMUPLUS heading is relative to power-on anyway).
     imu0: imu/data
     imu0_config: [false, false, false,
-                  false, false, false,
-                  false, false, false,
                   false, false, true,
+                  false, false, false,
+                  false, false, false,
                   false, false, false]
     imu0_queue_size: 10
     imu0_differential: false
