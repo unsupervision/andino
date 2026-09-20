@@ -85,6 +85,25 @@ void SerialMcu::setup(const std::string& serial_device, int32_t baud_rate, int32
   serial_port_.SetRTS(false);
   // Flush buffers.
   serial_port_.FlushIOBuffers();
+
+  // The wait above is a floor, not a guarantee. Opening the port resets the board, and it answers
+  // nothing until the bootloader has timed out AND the IMU has been initialised: measured 2.14 s
+  // on an Arduino Nano (Optiboot) with a BNO055 — and a command sent before that is not queued,
+  // it is lost. So ask until it answers. `e` is read-only and always answered.
+  if (!wait_until_ready(std::chrono::seconds(5))) {
+    std::cerr << "The Microcontroller did not answer within 5 seconds of opening " << serial_device << "."
+              << std::endl;
+  }
+}
+
+bool SerialMcu::wait_until_ready(std::chrono::milliseconds deadline) {
+  const auto end = std::chrono::steady_clock::now() + deadline;
+  while (std::chrono::steady_clock::now() < end) {
+    if (!send_message("e", /* log_timeout */ false).empty()) {
+      return true;
+    }
+  }
+  return false;
 }
 
 bool SerialMcu::is_connected() const { return serial_port_.IsOpen(); }
@@ -101,7 +120,17 @@ SerialMcu::EncodersData SerialMcu::read_encoders() {
   return {std::atoi(token_1.c_str()), std::atoi(token_2.c_str())};
 }
 
-bool SerialMcu::is_imu_available() { return std::atoi(send_message("h").c_str()) != 0; }
+bool SerialMcu::is_imu_available() {
+  // Decided once and lived with for the whole session, so one lost exchange must not decide it.
+  for (int attempt = 0; attempt < 3; ++attempt) {
+    const std::string response = send_message("h", /* log_timeout */ false);
+    if (!response.empty()) {
+      return std::atoi(response.c_str()) != 0;
+    }
+  }
+  std::cerr << "No response to h after 3 attempts." << std::endl;
+  return false;
+}
 
 SerialMcu::EncodersAndImuData SerialMcu::read_encoders_and_imu() {
   static const std::string delimiter = " ";
@@ -138,7 +167,7 @@ void SerialMcu::set_pid_tuning_gains(float kp, float kd, float ki, float ko) {
   send_message(ss.str());
 }
 
-std::string SerialMcu::send_message(const std::string& msg) {
+std::string SerialMcu::send_message(const std::string& msg, bool log_timeout) {
   // Add carriage return to the message.
   const std::string msg_to_send = msg + '\r';
   // Send the message.
@@ -149,7 +178,9 @@ std::string SerialMcu::send_message(const std::string& msg) {
   try {
     serial_port_.ReadLine(response, '\n', timeout_ms_);
   } catch (LibSerial::ReadTimeout&) {
-    std::cerr << "Response to " << msg << " timed out." << std::endl;
+    if (log_timeout) {
+      std::cerr << "Response to " << msg << " timed out." << std::endl;
+    }
   }
   return response;
 }

@@ -29,6 +29,7 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #pragma once
 
+#include <chrono>
 #include <string>
 
 #include <libserial/SerialPort.h>
@@ -77,7 +78,12 @@ class SerialMcu : public Mcu {
   /// @brief Sends a message to the microcontroller and reads the response.
   /// @param msg Message to send to the microcontroller.
   /// @returns The response from the microcontroller.
-  std::string send_message(const std::string& msg);
+  /// @param[in] log_timeout Whether to report a timed out response on stderr.
+  std::string send_message(const std::string& msg, bool log_timeout = true);
+
+  /// @brief Blocks until the microcontroller answers, or the deadline passes.
+  /// @returns True if it answered.
+  bool wait_until_ready(std::chrono::milliseconds deadline);
 
   // Underlying serial connection.
   LibSerial::SerialPort serial_port_;
