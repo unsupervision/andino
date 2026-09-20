@@ -98,6 +98,12 @@ void SerialMcu::setup(const std::string& serial_device, int32_t baud_rate, int32
   }
 }
 
+void SerialMcu::resync() {
+  // Longer than the slowest reply (encoders + IMU: ~14 ms at 115200 baud), shorter than anyone notices.
+  std::this_thread::sleep_for(std::chrono::milliseconds(40));
+  serial_port_.FlushIOBuffers();
+}
+
 bool SerialMcu::wait_until_ready(std::chrono::milliseconds deadline) {
   const auto end = std::chrono::steady_clock::now() + deadline;
   while (std::chrono::steady_clock::now() < end) {
@@ -196,6 +202,8 @@ std::string SerialMcu::send_message(const std::string& msg, bool log_timeout) {
     if (log_timeout) {
       std::cerr << "Response to " << msg << " timed out." << std::endl;
     }
+    // Whatever that reply was, it must not be read as the answer to the next command.
+    resync();
   }
   return response;
 }

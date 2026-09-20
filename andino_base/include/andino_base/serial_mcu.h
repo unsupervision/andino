@@ -74,6 +74,13 @@ class SerialMcu : public Mcu {
   /// @brief Implements Mcu interface class API.
   void set_pid_tuning_gains(float kp, float kd, float ki, float ko) override;
 
+  /// @brief Gets back in step with the microcontroller after a reply was missed.
+  /// The protocol is strictly one reply per command with nothing to tell replies apart, so a reply
+  /// that arrives after its command timed out is read as the answer to the NEXT command — and to
+  /// every command after it: the exchange stays one reply behind forever. Waits for stragglers to
+  /// land, then drops them.
+  void resync();
+
  private:
   /// @brief Sends a message to the microcontroller and reads the response.
   /// @param msg Message to send to the microcontroller.

@@ -201,6 +201,8 @@ hardware_interface::return_type DiffDriveAndino::read(const rclcpp::Time& /* tim
     // teleported its wheels back to zero; the next good reading carries the missed ticks.
     if (norm < 0.9 || norm > 1.1) {
       RCLCPP_WARN_THROTTLE(logger_, throttle_clock_, 5000, "Discarding a malformed reply from the microcontroller.");
+      // Most likely it is somebody else's reply: get back in step before the next exchange.
+      serial_mcu_.resync();
       return hardware_interface::return_type::OK;
     }
     left_wheel_.enc_ = data.encoders_data[0];
