@@ -53,7 +53,10 @@ class Wheel {
   double Angle();
 
   std::string name_ = "";
-  unsigned int enc_ = 0;
+  // SIGNED: the firmware counts down when a wheel turns backwards. As `unsigned` a count of -5
+  // became 4294967291, i.e. the wheel "moved" 46 million radians the instant it reversed past its
+  // starting point — one cycle of absurd velocity into the odometry and any filter behind it.
+  int enc_ = 0;
   double cmd_ = 0;
   double pos_ = 0;
   double vel_ = 0;
