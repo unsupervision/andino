@@ -88,10 +88,11 @@ void SerialMcu::setup(const std::string& serial_device, int32_t baud_rate, int32
   // Flush buffers.
   serial_port_.FlushIOBuffers();
 
-  // The wait above is a floor, not a guarantee. Opening the port resets the board, and it answers
-  // nothing until the bootloader has timed out AND the IMU has been initialised: measured 2.14 s
-  // on an Arduino Nano (Optiboot) with a BNO055 — and a command sent before that is not queued,
-  // it is lost. So ask until it answers. `e` is read-only and always answered.
+  // The wait above is a guess, not a guarantee, so ask until the board answers. Measured on an
+  // Arduino Nano (Optiboot) with a BNO055: polled from the moment the port opens, it first answers
+  // after ~1.2 s — yet with this function's exact sequence a single command sent at 2.0 s came
+  // back 140 ms late twice and never once (cause not established). Either way, one blind command
+  // after a fixed sleep is not a handshake. `e` is read-only and always answered.
   if (!wait_until_ready(std::chrono::seconds(5))) {
     std::cerr << "The Microcontroller did not answer within 5 seconds of opening " << serial_device << "."
               << std::endl;
