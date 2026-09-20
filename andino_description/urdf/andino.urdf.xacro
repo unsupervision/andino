@@ -102,6 +102,17 @@
   <xacro:camera_sensor parent_link="base_link" sensor_prop="${sensor_prop}">
   </xacro:camera_sensor>
 
+  <!-- IMU (BNO055, read through the microcontroller). Yaw fusion is indifferent to where on the
+       chassis the sensor sits, so the offset is left at zero; the ROTATION is what matters. It
+       assumes the board lies flat, component side up. Check it on the robot, upright: turned
+       counter-clockwise seen from above, the yaw reported in this frame must increase. -->
+  <link name="imu_link"/>
+  <joint name="imu_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="imu_link"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </joint>
+
   <!-- ros2_control -->
   <xacro:if value="$(arg use_real_ros_control)">
     <xacro:include filename="$(find ${package_name})/urdf/include/andino_control.urdf.xacro" />

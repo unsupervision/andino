@@ -29,6 +29,7 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #pragma once
 
+#include <array>
 #include <string>
 #include <vector>
 
@@ -76,6 +77,12 @@ class DiffDriveAndino : public hardware_interface::SystemInterface {
   const std::string kBaudRateParam{"baud_rate"};
   const std::string kTimeoutParam{"timeout"};
   const std::string kEncTicksPerRevParam{"enc_ticks_per_rev"};
+  // State interfaces an IMU <sensor> must declare: what imu_sensor_broadcaster claims, in the
+  // order the firmware reports them (orientation quaternion, angular velocity, linear acceleration).
+  const std::array<std::string, 10> kImuInterfaceNames{
+      "orientation.x",         "orientation.y",         "orientation.z",        "orientation.w",
+      "angular_velocity.x",    "angular_velocity.y",    "angular_velocity.z",   "linear_acceleration.x",
+      "linear_acceleration.y", "linear_acceleration.z"};
 
   // Configuration parameters for the DiffDriveAndino class.
   struct Config {
@@ -98,8 +105,17 @@ class DiffDriveAndino : public hardware_interface::SystemInterface {
   Wheel left_wheel_;
   // Right wheel of the robot.
   Wheel right_wheel_;
+  // Name of the IMU <sensor> declared in the ros2_control description; empty when there is none.
+  std::string imu_sensor_name_;
+  // Whether the microcontroller reported an IMU at configuration time.
+  bool imu_available_{false};
+  // IMU state, in the order of kImuInterfaceNames. Starts as the identity orientation at rest, so a
+  // declared-but-absent sensor publishes a valid quaternion rather than a zero one.
+  std::array<double, 10> imu_state_{0., 0., 0., 1., 0., 0., 0., 0., 0., 0.};
   // Logger.
   rclcpp::Logger logger_{rclcpp::get_logger("DiffDriveAndino")};
+  // Clock for throttled logging.
+  rclcpp::Clock throttle_clock_{RCL_STEADY_TIME};
 };
 
 }  // namespace andino_base

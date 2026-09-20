@@ -39,6 +39,9 @@ def generate_launch_description():
     robot_description = {'robot_description': doc.toprettyxml(indent='  ')}
     controllers = os.path.join(
         get_package_share_directory('andino_control'), 'config', 'andino_controllers.yaml')
+    # Later files win: this one hands odom -> base_link to the EKF (robot_ekf.launch.py).
+    overrides = os.path.join(
+        get_package_share_directory('andino_bringup'), 'config', 'robot_base_overrides.yaml')
 
     rsp = Node(
         package='robot_state_publisher',
@@ -57,11 +60,12 @@ def generate_launch_description():
         executable='ros2_control_node',
         namespace=namespace,
         output='both',
-        parameters=[robot_description, controllers],
+        parameters=[robot_description, controllers, overrides],
         remappings=[
             ('diff_controller/cmd_vel', 'cmd_vel_stamped'),
             ('diff_controller/cmd_vel_out', 'cmd_vel_out'),
             ('diff_controller/odom', 'odom'),
+            ('imu_sensor_broadcaster/imu', 'imu/data'),
         ] + TF_REMAPPINGS,
     )
 
@@ -78,10 +82,23 @@ def generate_launch_description():
         namespace=namespace,
         arguments=['diff_controller', '--controller-manager', 'controller_manager'],
     )
+    imu_sensor_broadcaster_spawner = Node(
+        package='controller_manager',
+        executable='spawner',
+        namespace=namespace,
+        arguments=['imu_sensor_broadcaster', '--controller-manager', 'controller_manager'],
+    )
     diff_after_joint_state = RegisterEventHandler(
         event_handler=OnProcessExit(
             target_action=joint_state_broadcaster_spawner,
             on_exit=[diff_drive_controller_spawner],
+        )
+    )
+    # One spawner at a time: concurrent ones contend for the controller manager's services.
+    imu_after_diff = RegisterEventHandler(
+        event_handler=OnProcessExit(
+            target_action=diff_drive_controller_spawner,
+            on_exit=[imu_sensor_broadcaster_spawner],
         )
     )
 
@@ -104,5 +121,6 @@ def generate_launch_description():
         control_node,
         joint_state_broadcaster_spawner,
         diff_after_joint_state,
+        imu_after_diff,
         relay_node,
     ])

@@ -1,6 +1,10 @@
 left_wheel_name: left_wheel_joint
 right_wheel_name: right_wheel_joint
 serial_device: /dev/ttyUSB_ARDUINO
-baud_rate: 57600
-timeout: 1000
+# Must match Constants::kBaudrate in andino_firmware. 115200 because an encoders+IMU reply is ~75
+# bytes: at 57600 that is 15 ms of a 20 ms control cycle (measured on hardware).
+baud_rate: 115200
+# [ms] A reply normally lands within 10 ms. A lost one stalls the control loop for this long, so
+# keep it a few cycles, not a second.
+timeout: 100
 enc_ticks_per_rev: 585

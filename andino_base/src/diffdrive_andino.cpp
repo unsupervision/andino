@@ -29,6 +29,10 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "andino_base/diffdrive_andino.h"
 
+#include <algorithm>
+#include <cmath>
+#include <stdexcept>
+
 #include <hardware_interface/types/hardware_interface_type_values.hpp>
 #include <pluginlib/class_list_macros.hpp>
 
@@ -72,6 +76,26 @@ hardware_interface::CallbackReturn DiffDriveAndino::on_init(const hardware_inter
     }
   }
 
+  // An IMU is optional: it exists for this driver only if the description declares a <sensor>.
+  if (info.sensors.size() > 1) {
+    RCLCPP_FATAL(logger_, "%zu sensors declared. At most 1 (the IMU) is supported.", info.sensors.size());
+    return hardware_interface::CallbackReturn::ERROR;
+  }
+  if (info.sensors.size() == 1) {
+    const hardware_interface::ComponentInfo& sensor = info.sensors.front();
+    for (const std::string& name : kImuInterfaceNames) {
+      const bool declared =
+          std::any_of(sensor.state_interfaces.begin(), sensor.state_interfaces.end(),
+                      [&name](const hardware_interface::InterfaceInfo& interface) { return interface.name == name; });
+      if (!declared) {
+        RCLCPP_FATAL(logger_, "Sensor '%s' does not declare the state interface '%s'.", sensor.name.c_str(),
+                     name.c_str());
+        return hardware_interface::CallbackReturn::ERROR;
+      }
+    }
+    imu_sensor_name_ = sensor.name;
+  }
+
   // Set up the wheels
   left_wheel_.Setup(config_.left_wheel_name, config_.enc_ticks_per_rev);
   right_wheel_.Setup(config_.right_wheel_name, config_.enc_ticks_per_rev);
@@ -85,7 +109,22 @@ hardware_interface::CallbackReturn DiffDriveAndino::on_configure(const rclcpp_li
   RCLCPP_INFO(logger_, "On configure...");
 
   // Set up communication with the microcontroller.
-  serial_mcu_.setup(config_.serial_device, config_.baud_rate, config_.timeout);
+  try {
+    serial_mcu_.setup(config_.serial_device, config_.baud_rate, config_.timeout);
+  } catch (const std::invalid_argument& e) {
+    RCLCPP_FATAL(logger_, "%s", e.what());
+    return hardware_interface::CallbackReturn::ERROR;
+  }
+
+  if (!imu_sensor_name_.empty()) {
+    imu_available_ = serial_mcu_.is_imu_available();
+    if (imu_available_) {
+      RCLCPP_INFO(logger_, "IMU detected: '%s' is live.", imu_sensor_name_.c_str());
+    } else {
+      RCLCPP_WARN(logger_, "Sensor '%s' is declared but the microcontroller reports no IMU: its state stays at rest.",
+                  imu_sensor_name_.c_str());
+    }
+  }
 
   RCLCPP_INFO(logger_, "Finished Configuration");
 
@@ -106,6 +145,13 @@ std::vector<hardware_interface::StateInterface> DiffDriveAndino::export_state_in
       hardware_interface::StateInterface(right_wheel_.name_, hardware_interface::HW_IF_VELOCITY, &right_wheel_.vel_));
   state_interfaces.emplace_back(
       hardware_interface::StateInterface(right_wheel_.name_, hardware_interface::HW_IF_POSITION, &right_wheel_.pos_));
+
+  if (!imu_sensor_name_.empty()) {
+    for (size_t i = 0; i < kImuInterfaceNames.size(); ++i) {
+      state_interfaces.emplace_back(
+          hardware_interface::StateInterface(imu_sensor_name_, kImuInterfaceNames[i], &imu_state_[i]));
+    }
+  }
 
   return state_interfaces;
 }
@@ -145,10 +191,29 @@ hardware_interface::return_type DiffDriveAndino::read(const rclcpp::Time& /* tim
     return hardware_interface::return_type::ERROR;
   }
 
-  const SerialMcu::EncodersData encoders = serial_mcu_.read_encoders();
-
-  left_wheel_.enc_ = encoders[0];
-  right_wheel_.enc_ = encoders[1];
+  if (imu_available_) {
+    // One exchange for both: the serial link is the bottleneck of this loop.
+    const SerialMcu::EncodersAndImuData data = serial_mcu_.read_encoders_and_imu();
+    const auto& q = data.imu_data.orientation;
+    const double norm = std::sqrt(q[0] * q[0] + q[1] * q[1] + q[2] * q[2] + q[3] * q[3]);
+    // A unit quaternion doubles as an integrity check of the whole line: a truncated or timed-out
+    // reply parses as zeros. Keep the whole previous state rather than report a robot that
+    // teleported its wheels back to zero; the next good reading carries the missed ticks.
+    if (norm < 0.9 || norm > 1.1) {
+      RCLCPP_WARN_THROTTLE(logger_, throttle_clock_, 5000, "Discarding a malformed reply from the microcontroller.");
+      return hardware_interface::return_type::OK;
+    }
+    left_wheel_.enc_ = data.encoders_data[0];
+    right_wheel_.enc_ = data.encoders_data[1];
+    std::copy(q.begin(), q.end(), imu_state_.begin());
+    std::copy(data.imu_data.angular_velocity.begin(), data.imu_data.angular_velocity.end(), imu_state_.begin() + 4);
+    std::copy(data.imu_data.linear_acceleration.begin(), data.imu_data.linear_acceleration.end(),
+              imu_state_.begin() + 7);
+  } else {
+    const SerialMcu::EncodersData encoders = serial_mcu_.read_encoders();
+    left_wheel_.enc_ = encoders[0];
+    right_wheel_.enc_ = encoders[1];
+  }
 
   const double left_pos_prev = left_wheel_.pos_;
   left_wheel_.pos_ = left_wheel_.Angle();

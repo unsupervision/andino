@@ -1,0 +1,47 @@
+# robot_localization EKF for one Andino: wheel odometry + the BNO055's gyro -> odom -> base_link.
+# Wildcard node key so that it configures the filter in any namespace (/<robot>/ekf_filter_node).
+#
+# Each *_config row is   x  y  z | roll pitch yaw | vx vy vz | vroll vpitch vyaw | ax ay az
+/**/ekf_filter_node:
+  ros__parameters:
+    frequency: 50.0
+    sensor_timeout: 0.2
+    two_d_mode: true
+    publish_tf: true
+    print_diagnostics: false
+
+    # Frames carry no robot prefix; the TF TOPIC is per-robot (remapped to /<robot>/tf).
+    map_frame: map
+    odom_frame: odom
+    base_link_frame: base_link
+    world_frame: odom
+
+    # Wheel odometry: velocities only. Its pose is just those velocities integrated once already;
+    # fusing both would count the same information twice. vy is fused as the zero it is — a
+    # differential drive cannot slide sideways — which keeps the filter from inventing drift.
+    odom0: odom
+    odom0_config: [false, false, false,
+                   false, false, false,
+                   true,  true,  false,
+                   false, false, true,
+                   false, false, false]
+    odom0_queue_size: 10
+    odom0_differential: false
+    odom0_relative: false
+
+    # IMU: the gyro's yaw RATE only, for now. The fused orientation is deliberately left out: the
+    # firmware runs the BNO055 in its default NDOF mode, which steers heading by the magnetometer,
+    # and this one sits a few centimetres from two DC motors. Until that heading has been watched
+    # with the motors running (or the sensor moved to IMUPLUS, which ignores the magnetometer),
+    # integrating the gyro is the trustworthy part. To add it: set the 6th entry (yaw) true and
+    # imu0_relative: true.
+    imu0: imu/data
+    imu0_config: [false, false, false,
+                  false, false, false,
+                  false, false, false,
+                  false, false, true,
+                  false, false, false]
+    imu0_queue_size: 10
+    imu0_differential: false
+    imu0_relative: true
+    imu0_remove_gravitational_acceleration: false

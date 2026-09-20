@@ -33,9 +33,34 @@
 #include <cstdlib>
 #include <iostream>
 #include <sstream>
+#include <stdexcept>
 #include <thread>
 
 namespace andino_base {
+namespace {
+
+// Maps a baud rate in bits per second to LibSerial's enumeration.
+// @throws std::invalid_argument for a rate the firmware cannot be built with.
+LibSerial::BaudRate to_libserial_baud_rate(int32_t baud_rate) {
+  switch (baud_rate) {
+    case 9600:
+      return LibSerial::BaudRate::BAUD_9600;
+    case 19200:
+      return LibSerial::BaudRate::BAUD_19200;
+    case 38400:
+      return LibSerial::BaudRate::BAUD_38400;
+    case 57600:
+      return LibSerial::BaudRate::BAUD_57600;
+    case 115200:
+      return LibSerial::BaudRate::BAUD_115200;
+    case 230400:
+      return LibSerial::BaudRate::BAUD_230400;
+    default:
+      throw std::invalid_argument("Unsupported baud rate: " + std::to_string(baud_rate));
+  }
+}
+
+}  // namespace
 
 void SerialMcu::setup(const std::string& serial_device, int32_t baud_rate, int32_t timeout_ms) {
   timeout_ms_ = timeout_ms;
@@ -50,12 +75,8 @@ void SerialMcu::setup(const std::string& serial_device, int32_t baud_rate, int32
   // And tipically when the serial port is opened, the Microcontroller is reset.
   std::this_thread::sleep_for(std::chrono::seconds(2));
 
-  // TODO: Use baud_rate from parameter.
-  if (baud_rate != 57600) {
-    std::cerr << "A baudrate different than 57600 is not supported yet." << std::endl;
-  }
-  // Configure the serial port.
-  serial_port_.SetBaudRate(LibSerial::BaudRate::BAUD_57600);
+  // Configure the serial port. It must match Constants::kBaudrate in andino_firmware.
+  serial_port_.SetBaudRate(to_libserial_baud_rate(baud_rate));
   serial_port_.SetCharacterSize(LibSerial::CharacterSize::CHAR_SIZE_8);
   serial_port_.SetParity(LibSerial::Parity::PARITY_NONE);
   serial_port_.SetStopBits(LibSerial::StopBits::STOP_BITS_1);

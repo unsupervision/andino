@@ -1,0 +1,9 @@
+# Applied AFTER andino_control's andino_controllers.yaml by robot_base.launch.py.
+#
+# In a fleet deployment odom -> base_link belongs to the EKF (robot_ekf.launch.py), which fuses
+# this controller's odometry with the IMU. Two publishers of one transform make TF flicker
+# between two opinions, so the controller's own broadcast is switched off here — and only here:
+# upstream's single-process bringup keeps it.
+/**/diff_controller:
+  ros__parameters:
+    enable_odom_tf: false
