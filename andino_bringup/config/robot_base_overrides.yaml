@@ -34,18 +34,22 @@
     linear.x.max_velocity: 0.20          # [m/s]
     linear.x.min_velocity: -0.20
     linear.x.has_acceleration_limits: true
-    linear.x.max_acceleration: 0.4       # [m/s^2]
-    linear.x.max_deceleration: -0.8
-    linear.x.max_acceleration_reverse: -0.4
-    linear.x.max_deceleration_reverse: 0.8
+    # 0.25, down from 0.4 (2026-09-20): the robot REBOOTED a metre and a half into its first drive
+    # by a person with a gamepad. Everything — Pi, lidar, both motors — draws through the Pi's one
+    # USB-C input from a 3 A power bank, and motor current peaks while ACCELERATING. Braking does
+    # not draw from the supply, so it stays twice as hard: stopping is the safe direction.
+    linear.x.max_acceleration: 0.25      # [m/s^2]
+    linear.x.max_deceleration: -0.5
+    linear.x.max_acceleration_reverse: -0.25
+    linear.x.max_deceleration_reverse: 0.5
     angular.z.has_velocity_limits: true
     angular.z.max_velocity: 1.2          # [rad/s]
     angular.z.min_velocity: -1.2
     angular.z.has_acceleration_limits: true
-    angular.z.max_acceleration: 2.5      # [rad/s^2]
-    angular.z.max_deceleration: -5.0
-    angular.z.max_acceleration_reverse: -2.5
-    angular.z.max_deceleration_reverse: 5.0
+    angular.z.max_acceleration: 1.5      # [rad/s^2]  (was 2.5; same reason)
+    angular.z.max_deceleration: -3.0
+    angular.z.max_acceleration_reverse: -1.5
+    angular.z.max_deceleration_reverse: 3.0
     # Explicit, not inherited: with no fresh command for this long the base stops by itself. The
     # firmware has its own 3 s auto-stop behind it (Constants::kAutoStopWindow).
     cmd_vel_timeout: 0.5                 # [s]
