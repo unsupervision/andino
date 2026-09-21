@@ -87,6 +87,8 @@ struct Commands {
   static constexpr const char* kReadEncodersAndImu{"i"};
   /// @brief Gets the firmware version this board was built from.
   static constexpr const char* kGetVersion{"v"};
+  /// @brief Gets the IMU's calibration status [format: "system gyroscope accelerometer magnetometer", 0-3 each].
+  static constexpr const char* kGetImuCalibration{"c"};
 };
 
 }  // namespace andino

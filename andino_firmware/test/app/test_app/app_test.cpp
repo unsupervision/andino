@@ -82,6 +82,7 @@ class MockImu : public andino::Imu {
   MOCK_METHOD(andino::Imu::Orientation, get_orientation, (), (const, override));
   MOCK_METHOD(andino::Imu::Vector3, get_angular_velocity, (), (const, override));
   MOCK_METHOD(andino::Imu::Vector3, get_linear_acceleration, (), (const, override));
+  MOCK_METHOD(andino::Imu::CalibrationStatus, get_calibration_status, (), (const, override));
 };
 
 /// @brief Serial stream fake that replays a canned input and records everything written to it.
@@ -343,6 +344,18 @@ TEST_F(AppTest, GetIsImuConnectedCommandWhenNotConnected) {
   app_.setup();
 
   EXPECT_EQ(run_command("h"), "0\n");
+}
+
+TEST_F(AppTest, GetImuCalibrationCommand) {
+  app_.setup();
+  andino::Imu::CalibrationStatus status;
+  status.system = 1;
+  status.gyroscope = 3;
+  status.accelerometer = 0;
+  status.magnetometer = 2;
+  ON_CALL(imu_, get_calibration_status()).WillByDefault(Return(status));
+
+  EXPECT_EQ(run_command("c"), "1 3 0 2\n");
 }
 
 TEST_F(AppTest, GetVersionCommand) {

@@ -97,6 +97,7 @@ void App::setup() {
   shell_.register_command(Commands::kGetIsImuConnected, cmd_get_is_imu_connected_cb, this);
   shell_.register_command(Commands::kReadEncodersAndImu, cmd_read_encoders_and_imu_cb, this);
   shell_.register_command(Commands::kGetVersion, cmd_get_version_cb, this);
+  shell_.register_command(Commands::kGetImuCalibration, cmd_get_imu_calibration_cb, this);
 
   // Initialize IMU sensor.
   is_imu_connected = imu_.begin();
@@ -243,6 +244,18 @@ void App::cmd_get_is_imu_connected_cb(void* context, int, char**) {
 void App::cmd_get_version_cb(void* context, int, char**) {
   App* app = static_cast<App*>(context);
   app->serial_stream_.println(Constants::kFirmwareVersion);
+}
+
+void App::cmd_get_imu_calibration_cb(void* context, int, char**) {
+  App* app = static_cast<App*>(context);
+  const Imu::CalibrationStatus status = app->imu_.get_calibration_status();
+  app->serial_stream_.print(static_cast<int>(status.system));
+  app->serial_stream_.print(" ");
+  app->serial_stream_.print(static_cast<int>(status.gyroscope));
+  app->serial_stream_.print(" ");
+  app->serial_stream_.print(static_cast<int>(status.accelerometer));
+  app->serial_stream_.print(" ");
+  app->serial_stream_.println(static_cast<int>(status.magnetometer));
 }
 
 void App::cmd_read_encoders_and_imu_cb(void* context, int, char**) {

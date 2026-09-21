@@ -48,6 +48,8 @@ class ImuArduino : public Imu {
   Vector3 get_angular_velocity() const override;
 
   Vector3 get_linear_acceleration() const override;
+
+  CalibrationStatus get_calibration_status() const override;
 };
 
 }  // namespace andino

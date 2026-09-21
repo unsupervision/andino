@@ -74,6 +74,21 @@ class Imu {
     double z{0.0};
   };
 
+  /// @brief How far the sensor's own fusion trusts each of its inputs: 0 (not calibrated) to 3 (fully).
+  /// A heading that uses the magnetometer means little until `magnetometer` has left 0 — and the
+  /// moment it does is when such sensors are known to jump. Without this nobody can say which regime
+  /// a run was in.
+  struct CalibrationStatus {
+    /// Overall fusion status.
+    unsigned char system{0};
+    /// Gyroscope.
+    unsigned char gyroscope{0};
+    /// Accelerometer.
+    unsigned char accelerometer{0};
+    /// Magnetometer (stays 0 in a mode that does not use it).
+    unsigned char magnetometer{0};
+  };
+
   /// @brief Constructs an Imu.
   explicit Imu() = default;
 
@@ -99,6 +114,11 @@ class Imu {
   ///
   /// @return Linear acceleration vector [m/s^2].
   virtual Vector3 get_linear_acceleration() const = 0;
+
+  /// @brief Gets the calibration status of the sensor's fusion.
+  ///
+  /// @return Calibration status, 0-3 per input.
+  virtual CalibrationStatus get_calibration_status() const = 0;
 };
 
 }  // namespace andino

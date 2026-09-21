@@ -52,7 +52,18 @@ bool ImuArduino::begin() const {
   // been calibrated by waving it in a figure of eight, which a floor robot never does (and the
   // BNO055 forgets at every power-off). Here heading is RELATIVE to power-on and smooth; an
   // absolute reference, where one is wanted, belongs to the localisation layer.
-  if (!g_bno055_imu.begin(OPERATION_MODE_IMUPLUS)) {
+  //
+  // The other side of that argument is a build flag away, -DANDINO_IMU_NDOF: the magnetometer is the
+  // only ABSOLUTE heading reference on the robot, and gyro-only heading measurably drifts with
+  // turning (27 degrees over a 106 m, 6000-degree drive, 2026-09-21). Whether the indoor field is
+  // usable is an experiment, not an opinion — `c` (calibration status) says which regime a run
+  // was in. The firmware version string carries the mode.
+#ifdef ANDINO_IMU_NDOF
+  constexpr auto kMode = OPERATION_MODE_NDOF;
+#else
+  constexpr auto kMode = OPERATION_MODE_IMUPLUS;
+#endif
+  if (!g_bno055_imu.begin(kMode)) {
     return false;
   }
   g_bno055_imu.setExtCrystalUse(true);
@@ -82,6 +93,17 @@ Imu::Vector3 ImuArduino::get_linear_acceleration() const {
   // further information.
   imu::Vector<3> linear_acceleration = g_bno055_imu.getVector(Adafruit_BNO055::VECTOR_LINEARACCEL);
   return Vector3{linear_acceleration.x(), linear_acceleration.y(), linear_acceleration.z()};
+}
+
+Imu::CalibrationStatus ImuArduino::get_calibration_status() const {
+  uint8_t system = 0, gyroscope = 0, accelerometer = 0, magnetometer = 0;
+  g_bno055_imu.getCalibration(&system, &gyroscope, &accelerometer, &magnetometer);
+  CalibrationStatus status;
+  status.system = system;
+  status.gyroscope = gyroscope;
+  status.accelerometer = accelerometer;
+  status.magnetometer = magnetometer;
+  return status;
 }
 
 }  // namespace andino

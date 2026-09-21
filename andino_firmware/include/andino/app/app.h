@@ -125,6 +125,9 @@ class App {
   /// Callback method for the `Commands::kGetVersion` command.
   static void cmd_get_version_cb(void* context, int argc, char** argv);
 
+  /// Callback method for the `Commands::kGetImuCalibration` command.
+  static void cmd_get_imu_calibration_cb(void* context, int argc, char** argv);
+
   /// Computes the PID output and updates the motors speed accordingly.
   /// @param elapsed_ms Time since the previous computation [ms].
   void adjust_motors_speed(unsigned long elapsed_ms);
