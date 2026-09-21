@@ -19,11 +19,18 @@
     # Wheel odometry: velocities only. Its pose is just those velocities integrated once already;
     # fusing both would count the same information twice. vy is fused as the zero it is — a
     # differential drive cannot slide sideways — which keeps the filter from inventing drift.
+    #
+    # The wheels' YAW RATE is NOT fused (owner's call, 2026-09-21): heading comes from the IMU alone.
+    # Measured on a 106 m drive before the change: the fused heading already WAS the IMU's (never
+    # more than 4.6 degrees apart in a turn, 0.00 at the end; position closure 0.83 m with wheel yaw
+    # fused, 0.84 m without) — the wheels over-read turning by 4% (scrub) and the filter rightly
+    # ignored them. What this gives up: a fallback if the IMU stops answering; the heading then
+    # FREEZES while the robot turns. `base` logs "Discarding a malformed reply" if that happens.
     odom0: odom
     odom0_config: [false, false, false,
                    false, false, false,
                    true,  true,  false,
-                   false, false, true,
+                   false, false, false,
                    false, false, false]
     odom0_queue_size: 10
     odom0_differential: false
