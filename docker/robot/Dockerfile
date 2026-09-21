@@ -50,6 +50,13 @@ RUN source "/opt/ros/${ROS_DISTRO}/setup.bash" \
 # Runtime = the dependency layer + the built install tree. The build tree is left behind.
 FROM deps AS runtime
 ARG ROS_DISTRO
+# An on-robot gamepad (a wireless pad whose receiver rides on the robot: teleop that neither fades
+# with distance nor crosses the Wi-Fi). Launch file and button map live with the deployment, not
+# here. A LATE layer on purpose, not part of `deps`: the robot pulls images over Wi-Fi onto an SD
+# card, and this way two small packages cost a small layer instead of a new 1 GB one.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends "ros-${ROS_DISTRO}-joy-linux" "ros-${ROS_DISTRO}-teleop-twist-joy" \
+ && rm -rf /var/lib/apt/lists/*
 COPY --from=build /opt/andino /opt/andino
 COPY docker/robot/entrypoint.sh /entrypoint.sh
 # For liveness probes: a node that is running is not necessarily a node that is publishing.
