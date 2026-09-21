@@ -65,6 +65,11 @@ class SerialMcu : public Mcu {
   /// @brief Implements Mcu interface class API.
   EncodersAndImuData read_encoders_and_imu() override;
 
+  /// @brief The IMU's calibration status: {system, gyroscope, accelerometer, magnetometer}, 0-3 each.
+  /// Not part of the Mcu interface: a diagnostic of THIS link's firmware (command `c`). Firmware
+  /// without the command answers something else; that is reported as {-1, -1, -1, -1}, never parsed.
+  std::array<int, 4> read_imu_calibration();
+
   /// @brief Implements Mcu interface class API.
   void set_motors_speed(int left_motor_speed, int right_motor_speed) override;
 

@@ -109,6 +109,12 @@ class DiffDriveAndino : public hardware_interface::SystemInterface {
   std::string imu_sensor_name_;
   // Whether the microcontroller reported an IMU at configuration time.
   bool imu_available_{false};
+  // Polled every kCalibrationPollCycles reads and LOGGED ON CHANGE: whether a heading that uses the
+  // magnetometer can be believed depends on it, and it changes while the robot drives.
+  static constexpr int kCalibrationPollCycles{60};
+  int calibration_poll_countdown_{kCalibrationPollCycles};
+  int calibration_poll_failures_{0};
+  std::array<int, 4> imu_calibration_{-2, -2, -2, -2};
   // IMU state, in the order of kImuInterfaceNames. Starts as the identity orientation at rest, so a
   // declared-but-absent sensor publishes a valid quaternion rather than a zero one.
   std::array<double, 10> imu_state_{0., 0., 0., 1., 0., 0., 0., 0., 0., 0.};

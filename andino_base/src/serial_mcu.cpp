@@ -154,6 +154,18 @@ bool SerialMcu::is_imu_available() {
   return false;
 }
 
+std::array<int, 4> SerialMcu::read_imu_calibration() {
+  const std::string response = send_message("c", /* log_timeout */ false);
+  std::istringstream iss(response);
+  std::array<int, 4> status{-1, -1, -1, -1};
+  std::string rest;
+  if (!(iss >> status[0] >> status[1] >> status[2] >> status[3]) || (iss >> rest) ||
+      std::any_of(status.begin(), status.end(), [](int v) { return v < 0 || v > 3; })) {
+    return {-1, -1, -1, -1};  // an older firmware's "invalid command", or somebody else's reply
+  }
+  return status;
+}
+
 SerialMcu::EncodersAndImuData SerialMcu::read_encoders_and_imu() {
   static const std::string delimiter = " ";
 

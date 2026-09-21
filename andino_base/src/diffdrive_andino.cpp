@@ -211,6 +211,23 @@ hardware_interface::return_type DiffDriveAndino::read(const rclcpp::Time& /* tim
     std::copy(data.imu_data.angular_velocity.begin(), data.imu_data.angular_velocity.end(), imu_state_.begin() + 4);
     std::copy(data.imu_data.linear_acceleration.begin(), data.imu_data.linear_acceleration.end(),
               imu_state_.begin() + 7);
+
+    // One extra exchange (~4 ms) every two seconds; given up on after three unparseable answers,
+    // which is what a firmware from before the `c` command gives.
+    if (calibration_poll_failures_ < 3 && --calibration_poll_countdown_ <= 0) {
+      calibration_poll_countdown_ = kCalibrationPollCycles;
+      const std::array<int, 4> status = serial_mcu_.read_imu_calibration();
+      if (status[0] < 0) {
+        if (++calibration_poll_failures_ == 3) {
+          RCLCPP_INFO(logger_, "IMU calibration status not available from this firmware (no `c` command).");
+        }
+      } else if (status != imu_calibration_) {
+        calibration_poll_failures_ = 0;
+        imu_calibration_ = status;
+        RCLCPP_INFO(logger_, "IMU calibration (0-3): system %d, gyroscope %d, accelerometer %d, magnetometer %d", status[0],
+                    status[1], status[2], status[3]);
+      }
+    }
   } else {
     const SerialMcu::EncodersData encoders = serial_mcu_.read_encoders();
     left_wheel_.enc_ = encoders[0];
