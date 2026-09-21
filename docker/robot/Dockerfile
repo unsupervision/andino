@@ -57,6 +57,15 @@ ARG ROS_DISTRO
 RUN apt-get update \
  && apt-get install -y --no-install-recommends "ros-${ROS_DISTRO}-joy-linux" "ros-${ROS_DISTRO}-teleop-twist-joy" \
  && rm -rf /var/lib/apt/lists/*
+# The velocity MUX (on the robot, so a pad on the robot outranks anything arriving over Wi-Fi — an
+# autonomy stack included — without the network's help), and the camera: camera_ros speaks libcamera,
+# the only interface a Pi camera has on a current kernel; the compressed transport because a raw
+# 640x480 colour stream is ~110 Mbit/s and the robot's only link is Wi-Fi. Its own layer, after
+# the pad's, so that adding it did not re-ship the pad's layer either.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends "ros-${ROS_DISTRO}-twist-mux" \
+      "ros-${ROS_DISTRO}-camera-ros" "ros-${ROS_DISTRO}-compressed-image-transport" \
+ && rm -rf /var/lib/apt/lists/*
 COPY --from=build /opt/andino /opt/andino
 COPY docker/robot/entrypoint.sh /entrypoint.sh
 # For liveness probes: a node that is running is not necessarily a node that is publishing.
